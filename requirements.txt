@@ -1,1 +1,7 @@
 # Зависимости проекта
+
+# Telegram Bot API
+python-telegram-bot==20.7
+
+# Загрузка переменных окружения
+python-dotenv==1.0.0
