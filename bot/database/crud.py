@@ -314,3 +314,19 @@ def get_subject_attendance_dates(session: Session, subject_id: int) -> List[date
         .order_by(Attendance.date)
     )
     return list(result.scalars().all())
+
+
+def get_attendance(
+    session: Session,
+    student_id: int,
+    subject_id: int,
+    attendance_date: date
+) -> Optional[Attendance]:
+    """Получить запись посещаемости студента на конкретную дату."""
+    return session.execute(
+        select(Attendance).where(
+            Attendance.student_id == student_id,
+            Attendance.subject_id == subject_id,
+            Attendance.date == attendance_date
+        )
+    ).scalar_one_or_none()
