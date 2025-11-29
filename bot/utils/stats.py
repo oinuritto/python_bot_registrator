@@ -27,24 +27,45 @@ def get_student_stats(student_id: int, subject_id: Optional[int] = None) -> dict
             return {}
         
         if subject_id:
-            # Статистика по конкретной дисциплине
+            # Получаем ВСЕ даты занятий по дисциплине
+            all_dates = crud.get_subject_attendance_dates(session, subject_id)
+            
+            # Получаем записи посещаемости студента
             attendances = crud.get_student_attendance_by_subject(
                 session, student_id, subject_id
             )
+            attendance_dict = {att.date: att.is_present for att in attendances}
+            
+            dates_present = []
+            dates_absent = []
+            
+            # Проверяем каждую дату занятия
+            for d in all_dates:
+                if d in attendance_dict:
+                    if attendance_dict[d]:
+                        dates_present.append(d)
+                    else:
+                        dates_absent.append(d)
+                else:
+                    # Нет записи = пропуск
+                    dates_absent.append(d)
+            
+            total = len(all_dates)
         else:
-            # Статистика по всем дисциплинам
+            # Статистика по всем дисциплинам (старая логика)
             attendances = crud.get_student_all_attendance(session, student_id)
+            
+            dates_present = []
+            dates_absent = []
+            
+            for att in attendances:
+                if att.is_present:
+                    dates_present.append(att.date)
+                else:
+                    dates_absent.append(att.date)
+            
+            total = len(attendances)
         
-        dates_present = []
-        dates_absent = []
-        
-        for att in attendances:
-            if att.is_present:
-                dates_present.append(att.date)
-            else:
-                dates_absent.append(att.date)
-        
-        total = len(attendances)
         present = len(dates_present)
         absent = len(dates_absent)
         percentage = round(present / total * 100, 1) if total > 0 else 0
