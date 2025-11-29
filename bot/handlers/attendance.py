@@ -15,6 +15,7 @@ from telegram.ext import (
 
 from bot.database import get_session, crud
 from bot.states import AttendanceStates
+from bot.utils.calendar import create_calendar, parse_calendar_callback
 
 logger = logging.getLogger(__name__)
 
@@ -216,13 +217,18 @@ async def attendance_select_date(update: Update, context: ContextTypes.DEFAULT_T
             )
             return ConversationHandler.END
         
+        # Получаем даты с отметками
+        marked_dates = crud.get_subject_attendance_dates(session, subject_id)
+        
         await query.edit_message_text(
             text=(
                 f"✏️ <b>Отметка: {subject.name}</b>\n\n"
-                f"Студентов: {students_count}\n\n"
-                "Выберите дату занятия:"
+                f"Студентов: {students_count}\n"
+                f"📊 Дней с отметками: {len(marked_dates)}\n\n"
+                "📅 Выберите дату занятия:\n"
+                "<i>● — дни с отметками</i>"
             ),
-            reply_markup=get_date_keyboard(),
+            reply_markup=create_calendar(callback_prefix="cal", subject_id=subject_id, marked_dates=marked_dates),
             parse_mode="HTML"
         )
     finally:
@@ -303,11 +309,11 @@ async def attendance_date_selected(update: Update, context: ContextTypes.DEFAULT
     context.user_data["attendance_date"] = attendance_date
     
     # Показываем список студентов
-    return await show_attendance_marking_query(query, context, subject_id, attendance_date)
+    return await show_attendance_marking(update, context, subject_id, attendance_date)
 
 
 async def show_attendance_marking(update: Update, context: ContextTypes.DEFAULT_TYPE, subject_id: int, attendance_date: date) -> int:
-    """Показать список студентов для отметки (из сообщения)."""
+    """Показать список студентов для отметки (универсальная функция)."""
     session = get_session()
     try:
         subject = crud.get_subject_by_id(session, subject_id)
@@ -331,47 +337,19 @@ async def show_attendance_marking(update: Update, context: ContextTypes.DEFAULT_
         
         keyboard = get_students_attendance_keyboard(subject_id, attendance_date, session, attendance_data)
         
-        await update.message.reply_text(
-            text=text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-    finally:
-        session.close()
-    
-    return ConversationHandler.END
-
-
-async def show_attendance_marking_query(query, context: ContextTypes.DEFAULT_TYPE, subject_id: int, attendance_date: date) -> int:
-    """Показать список студентов для отметки (из callback query)."""
-    session = get_session()
-    try:
-        subject = crud.get_subject_by_id(session, subject_id)
-        students = crud.get_students_by_subject(session, subject_id)
-        
-        # Получаем текущие данные посещаемости
-        attendance_data = crud.get_attendance_by_subject_and_date(session, subject_id, attendance_date)
-        
-        # Сохраняем в контексте для быстрого доступа
-        context.user_data["attendance_data"] = attendance_data
-        
-        present_count = sum(1 for v in attendance_data.values() if v)
-        
-        text = (
-            f"✏️ <b>Отметка посещаемости</b>\n\n"
-            f"📚 {subject.name}\n"
-            f"📅 {format_date(attendance_date)}\n\n"
-            f"Присутствует: {present_count}/{len(students)}\n\n"
-            "Нажмите на студента для изменения статуса:"
-        )
-        
-        keyboard = get_students_attendance_keyboard(subject_id, attendance_date, session, attendance_data)
-        
-        await query.edit_message_text(
-            text=text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
+        # Определяем откуда вызов: кнопка или текст
+        if update.callback_query:
+            await update.callback_query.edit_message_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+        else:
+            await update.message.reply_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
     finally:
         session.close()
     
@@ -571,6 +549,79 @@ async def attendance_done(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     return ConversationHandler.END
 
 
+# === Обработчики календаря ===
+
+async def calendar_navigate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Навигация по календарю (переключение месяцев)."""
+    query = update.callback_query
+    await query.answer()
+    
+    data = parse_calendar_callback(query.data)
+    subject_id = data.get("subject_id")
+    year = data.get("year")
+    month = data.get("month")
+    
+    session = get_session()
+    try:
+        subject = crud.get_subject_by_id(session, subject_id)
+        students_count = crud.count_students_in_subject(session, subject_id)
+        marked_dates = crud.get_subject_attendance_dates(session, subject_id)
+        
+        await query.edit_message_text(
+            text=(
+                f"✏️ <b>Отметка: {subject.name}</b>\n\n"
+                f"Студентов: {students_count}\n"
+                f"📊 Дней с отметками: {len(marked_dates)}\n\n"
+                "📅 Выберите дату занятия:\n"
+                "<i>● — дни с отметками</i>"
+            ),
+            reply_markup=create_calendar(year, month, callback_prefix="cal", subject_id=subject_id, marked_dates=marked_dates),
+            parse_mode="HTML"
+        )
+    finally:
+        session.close()
+    
+    return ConversationHandler.END
+
+
+async def calendar_select_day(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Выбор дня в календаре."""
+    query = update.callback_query
+    await query.answer()
+    
+    data = parse_calendar_callback(query.data)
+    subject_id = data.get("subject_id")
+    selected_date = data.get("date")
+    
+    if not selected_date or not subject_id:
+        await query.answer("Ошибка выбора даты", show_alert=True)
+        return ConversationHandler.END
+    
+    context.user_data["attendance_subject_id"] = subject_id
+    context.user_data["attendance_date"] = selected_date
+    
+    return await show_attendance_marking(update, context, subject_id, selected_date)
+
+
+async def calendar_quick_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Быстрый выбор даты (сегодня/вчера)."""
+    query = update.callback_query
+    await query.answer()
+    
+    data = parse_calendar_callback(query.data)
+    subject_id = data.get("subject_id")
+    selected_date = data.get("date")
+    
+    if not selected_date or not subject_id:
+        await query.answer("Ошибка выбора даты", show_alert=True)
+        return ConversationHandler.END
+    
+    context.user_data["attendance_subject_id"] = subject_id
+    context.user_data["attendance_date"] = selected_date
+    
+    return await show_attendance_marking(update, context, subject_id, selected_date)
+
+
 # === ConversationHandler для отметки посещаемости ===
 
 def get_attendance_conversation_handler() -> ConversationHandler:
@@ -579,6 +630,12 @@ def get_attendance_conversation_handler() -> ConversationHandler:
         entry_points=[
             CallbackQueryHandler(attendance_menu, pattern="^menu_attendance$"),
             CallbackQueryHandler(attendance_select_date, pattern=r"^att_select_date_\d+$"),
+            # Календарь
+            CallbackQueryHandler(calendar_navigate, pattern=r"^cal_nav_\d+_\d+_\d+$"),
+            CallbackQueryHandler(calendar_select_day, pattern=r"^cal_day_\d+_\d+_\d+_\d+$"),
+            CallbackQueryHandler(calendar_quick_date, pattern=r"^cal_today_\d+$"),
+            CallbackQueryHandler(calendar_quick_date, pattern=r"^cal_yesterday_\d+$"),
+            # Старые обработчики (для совместимости)
             CallbackQueryHandler(attendance_date_selected, pattern=r"^att_date_\d{4}-\d{2}-\d{2}$"),
             CallbackQueryHandler(attendance_date_custom, pattern="^att_date_custom$"),
             CallbackQueryHandler(attendance_toggle, pattern=r"^att_toggle_\d+_\d{4}-\d{2}-\d{2}_\d+$"),
