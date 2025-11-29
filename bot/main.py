@@ -13,6 +13,7 @@ from telegram.ext import (
 )
 
 from bot.config import BOT_TOKEN, LOG_LEVEL, LOGS_DIR
+from bot.database import init_db
 
 # Настройка логирования
 logging.basicConfig(
@@ -148,6 +149,11 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
 def main() -> None:
     """Запуск бота."""
     logger.info("Запуск бота...")
+    
+    # Инициализация базы данных
+    logger.info("Инициализация базы данных...")
+    init_db()
+    logger.info("База данных готова!")
     
     # Создаем приложение
     application = Application.builder().token(BOT_TOKEN).build()

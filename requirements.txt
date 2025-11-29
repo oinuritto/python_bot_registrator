@@ -5,3 +5,6 @@ python-telegram-bot==20.7
 
 # Загрузка переменных окружения
 python-dotenv==1.0.0
+
+# База данных
+sqlalchemy==2.0.23
