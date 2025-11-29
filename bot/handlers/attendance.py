@@ -3,7 +3,7 @@
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ContextTypes,
@@ -44,17 +44,23 @@ def format_date(d: date) -> str:
 
 def parse_date(date_str: str) -> date | None:
     """Парсинг даты из строки."""
+    date_str = date_str.strip()
+    
+    # Сначала пробуем ISO формат (YYYY-MM-DD)
+    if "-" in date_str and len(date_str) == 10:
+        try:
+            return date.fromisoformat(date_str)
+        except ValueError:
+            pass
+    
+    # Пробуем разные форматы
     formats = ["%d.%m.%Y", "%d.%m.%y", "%d/%m/%Y", "%d-%m-%Y"]
     for fmt in formats:
         try:
-            return date.fromisoformat(date_str) if "-" in date_str and len(date_str) == 10 else None
-        except ValueError:
-            pass
-        try:
-            from datetime import datetime
             return datetime.strptime(date_str, fmt).date()
         except ValueError:
             continue
+    
     return None
 
 

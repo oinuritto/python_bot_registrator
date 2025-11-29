@@ -14,17 +14,33 @@ from bot.database import get_session, crud
 from bot.database.models import Subject, Student, Attendance
 
 
-def create_attendance_report(subject_id: int) -> io.BytesIO:
+def create_attendance_report(
+    subject_id: int, 
+    date_from: date | None = None, 
+    date_to: date | None = None
+) -> io.BytesIO:
     """
     Создать отчёт о посещаемости по дисциплине.
     Возвращает файл в памяти (BytesIO).
+    
+    Args:
+        subject_id: ID дисциплины
+        date_from: Начало периода (включительно)
+        date_to: Конец периода (включительно)
     """
     session = get_session()
     
     try:
         subject = crud.get_subject_by_id(session, subject_id)
         students = crud.get_students_by_subject(session, subject_id)
-        dates = crud.get_subject_attendance_dates(session, subject_id)
+        all_dates = crud.get_subject_attendance_dates(session, subject_id)
+        
+        # Фильтруем даты по периоду
+        dates = all_dates
+        if date_from:
+            dates = [d for d in dates if d >= date_from]
+        if date_to:
+            dates = [d for d in dates if d <= date_to]
         
         # Создаём книгу
         wb = Workbook()
@@ -48,7 +64,18 @@ def create_attendance_report(subject_id: int) -> io.BytesIO:
         )
         
         # Заголовок таблицы
-        ws['A1'] = f"Посещаемость: {subject.name}"
+        title = f"Посещаемость: {subject.name}"
+        if date_from or date_to:
+            period = ""
+            if date_from and date_to:
+                period = f" ({date_from.strftime('%d.%m.%Y')} — {date_to.strftime('%d.%m.%Y')})"
+            elif date_from:
+                period = f" (с {date_from.strftime('%d.%m.%Y')})"
+            elif date_to:
+                period = f" (по {date_to.strftime('%d.%m.%Y')})"
+            title += period
+        
+        ws['A1'] = title
         ws['A1'].font = Font(bold=True, size=14)
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max(4, len(dates) + 3))
         
@@ -163,10 +190,19 @@ def create_attendance_report(subject_id: int) -> io.BytesIO:
         session.close()
 
 
-def create_all_subjects_report(teacher_id: int) -> io.BytesIO:
+def create_all_subjects_report(
+    teacher_id: int,
+    date_from: date | None = None,
+    date_to: date | None = None
+) -> io.BytesIO:
     """
     Создать общий отчёт по всем дисциплинам преподавателя.
     Каждая дисциплина на отдельном листе.
+    
+    Args:
+        teacher_id: ID преподавателя
+        date_from: Начало периода (включительно)
+        date_to: Конец периода (включительно)
     """
     session = get_session()
     
@@ -183,7 +219,7 @@ def create_all_subjects_report(teacher_id: int) -> io.BytesIO:
         else:
             for subject in subjects:
                 ws = wb.create_sheet(subject.name[:31])  # Имя листа до 31 символа
-                _fill_subject_sheet(ws, subject, session)
+                _fill_subject_sheet(ws, subject, session, date_from, date_to)
         
         output = io.BytesIO()
         wb.save(output)
@@ -195,10 +231,23 @@ def create_all_subjects_report(teacher_id: int) -> io.BytesIO:
         session.close()
 
 
-def _fill_subject_sheet(ws, subject: Subject, session):
+def _fill_subject_sheet(
+    ws, 
+    subject: Subject, 
+    session,
+    date_from: date | None = None,
+    date_to: date | None = None
+):
     """Заполнить лист данными о посещаемости дисциплины."""
     students = crud.get_students_by_subject(session, subject.id)
-    dates = crud.get_subject_attendance_dates(session, subject.id)
+    all_dates = crud.get_subject_attendance_dates(session, subject.id)
+    
+    # Фильтруем даты по периоду
+    dates = all_dates
+    if date_from:
+        dates = [d for d in dates if d >= date_from]
+    if date_to:
+        dates = [d for d in dates if d <= date_to]
     
     # Стили
     header_font = Font(bold=True, size=11)
