@@ -18,6 +18,7 @@ from bot.handlers.subjects import get_subjects_conversation_handler
 from bot.handlers.students import get_students_conversation_handler
 from bot.handlers.subject_students import get_subject_students_conversation_handler
 from bot.handlers.attendance import get_attendance_conversation_handler
+from bot.handlers.export import get_export_conversation_handler
 
 # Настройка логирования
 logging.basicConfig(
@@ -116,7 +117,6 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Заглушки для ещё не реализованных функций
     messages = {
         "menu_stats": "📊 <b>Статистика</b>\n\n🚧 В разработке...",
-        "menu_export": "💾 <b>Экспорт данных</b>\n\n🚧 В разработке...",
         "menu_help": (
             "ℹ️ <b>Помощь</b>\n\n"
             "Используйте /help для получения справки.\n"
@@ -166,11 +166,12 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("menu", menu_command))
 
-    # Регистрируем ConversationHandler для дисциплин, студентов и посещаемости
+    # Регистрируем ConversationHandler для дисциплин, студентов, посещаемости и экспорта
     application.add_handler(get_subjects_conversation_handler())
     application.add_handler(get_students_conversation_handler())
     application.add_handler(get_subject_students_conversation_handler())
     application.add_handler(get_attendance_conversation_handler())
+    application.add_handler(get_export_conversation_handler())
 
     # Регистрируем обработчики кнопок
     application.add_handler(CallbackQueryHandler(

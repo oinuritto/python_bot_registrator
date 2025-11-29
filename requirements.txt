@@ -8,3 +8,6 @@ python-dotenv==1.0.0
 
 # База данных
 sqlalchemy==2.0.23
+
+# Экспорт в Excel
+openpyxl==3.1.2
