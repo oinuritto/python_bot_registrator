@@ -14,6 +14,7 @@ from telegram.ext import (
 
 from bot.config import BOT_TOKEN, LOG_LEVEL, LOGS_DIR
 from bot.database import init_db
+from bot.handlers.subjects import get_subjects_conversation_handler
 
 # Настройка логирования
 logging.basicConfig(
@@ -32,11 +33,13 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
     """Создает клавиатуру главного меню."""
     keyboard = [
         [
-            InlineKeyboardButton("📚 Дисциплины", callback_data="menu_subjects"),
+            InlineKeyboardButton(
+                "📚 Дисциплины", callback_data="menu_subjects"),
             InlineKeyboardButton("👥 Студенты", callback_data="menu_students"),
         ],
         [
-            InlineKeyboardButton("✏️ Отметить посещаемость", callback_data="menu_attendance"),
+            InlineKeyboardButton("✏️ Отметить посещаемость",
+                                 callback_data="menu_attendance"),
         ],
         [
             InlineKeyboardButton("📊 Статистика", callback_data="menu_stats"),
@@ -53,8 +56,8 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /start."""
     user = update.effective_user
-    logger.info(f"Пользователь {user.id} ({user.full_name}) запустил бота")
-    
+    logger.info("Пользователь %s (%s) запустил бота", user.id, user.full_name)
+
     welcome_text = (
         f"👋 Привет, {user.first_name}!\n\n"
         "Я бот-регистратор посещаемости лекций.\n\n"
@@ -66,7 +69,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• 💾 Экспортировать данные в Excel\n\n"
         "Выберите действие в меню ниже:"
     )
-    
+
     await update.message.reply_text(
         welcome_text,
         reply_markup=get_main_menu_keyboard(),
@@ -87,7 +90,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "3. Отмечайте посещаемость по датам\n"
         "4. Просматривайте статистику и экспортируйте данные"
     )
-    
+
     await update.message.reply_text(help_text, parse_mode="HTML")
 
 
@@ -104,12 +107,11 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """Обработчик нажатий на кнопки главного меню."""
     query = update.callback_query
     await query.answer()
-    
+
     callback_data = query.data
-    
-    # Пока заглушки - будут реализованы в следующих этапах
+
+    # Заглушки для ещё не реализованных функций
     messages = {
-        "menu_subjects": "📚 <b>Управление дисциплинами</b>\n\n🚧 В разработке...",
         "menu_students": "👥 <b>Управление студентами</b>\n\n🚧 В разработке...",
         "menu_attendance": "✏️ <b>Отметка посещаемости</b>\n\n🚧 В разработке...",
         "menu_stats": "📊 <b>Статистика</b>\n\n🚧 В разработке...",
@@ -120,14 +122,14 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "Для возврата в меню нажмите /menu"
         ),
     }
-    
+
     text = messages.get(callback_data, "Неизвестная команда")
-    
+
     # Добавляем кнопку "Назад" к ответу
     back_keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("◀️ Назад в меню", callback_data="back_to_menu")]
     ])
-    
+
     await query.edit_message_text(
         text=text,
         reply_markup=back_keyboard,
@@ -139,7 +141,7 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     """Обработчик кнопки 'Назад в меню'."""
     query = update.callback_query
     await query.answer()
-    
+
     await query.edit_message_text(
         text="📋 Главное меню:",
         reply_markup=get_main_menu_keyboard(),
@@ -149,24 +151,29 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
 def main() -> None:
     """Запуск бота."""
     logger.info("Запуск бота...")
-    
+
     # Инициализация базы данных
     logger.info("Инициализация базы данных...")
     init_db()
     logger.info("База данных готова!")
-    
+
     # Создаем приложение
     application = Application.builder().token(BOT_TOKEN).build()
-    
+
     # Регистрируем обработчики команд
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("menu", menu_command))
-    
+
+    # Регистрируем ConversationHandler для дисциплин
+    application.add_handler(get_subjects_conversation_handler())
+
     # Регистрируем обработчики кнопок
-    application.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
-    application.add_handler(CallbackQueryHandler(menu_callback, pattern="^menu_"))
-    
+    application.add_handler(CallbackQueryHandler(
+        back_to_menu_callback, pattern="^back_to_menu$"))
+    application.add_handler(CallbackQueryHandler(
+        menu_callback, pattern="^menu_"))
+
     # Запускаем бота
     logger.info("Бот запущен и готов к работе!")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
@@ -174,4 +181,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

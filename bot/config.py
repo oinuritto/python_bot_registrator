@@ -32,4 +32,3 @@ DATA_DIR.mkdir(exist_ok=True)
 # Путь к директории с логами
 LOGS_DIR = Path("logs")
 LOGS_DIR.mkdir(exist_ok=True)
-
