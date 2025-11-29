@@ -15,6 +15,8 @@ from telegram.ext import (
 from bot.config import BOT_TOKEN, LOG_LEVEL, LOGS_DIR
 from bot.database import init_db
 from bot.handlers.subjects import get_subjects_conversation_handler
+from bot.handlers.students import get_students_conversation_handler
+from bot.handlers.subject_students import get_subject_students_conversation_handler
 
 # Настройка логирования
 logging.basicConfig(
@@ -112,7 +114,6 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # Заглушки для ещё не реализованных функций
     messages = {
-        "menu_students": "👥 <b>Управление студентами</b>\n\n🚧 В разработке...",
         "menu_attendance": "✏️ <b>Отметка посещаемости</b>\n\n🚧 В разработке...",
         "menu_stats": "📊 <b>Статистика</b>\n\n🚧 В разработке...",
         "menu_export": "💾 <b>Экспорт данных</b>\n\n🚧 В разработке...",
@@ -165,8 +166,10 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("menu", menu_command))
 
-    # Регистрируем ConversationHandler для дисциплин
+    # Регистрируем ConversationHandler для дисциплин и студентов
     application.add_handler(get_subjects_conversation_handler())
+    application.add_handler(get_students_conversation_handler())
+    application.add_handler(get_subject_students_conversation_handler())
 
     # Регистрируем обработчики кнопок
     application.add_handler(CallbackQueryHandler(
