@@ -18,13 +18,13 @@ def get_or_create_teacher(session: Session, telegram_id: int, name: str) -> Teac
     teacher = session.execute(
         select(Teacher).where(Teacher.telegram_id == telegram_id)
     ).scalar_one_or_none()
-    
+
     if not teacher:
         teacher = Teacher(telegram_id=telegram_id, name=name)
         session.add(teacher)
         session.commit()
         session.refresh(teacher)
-    
+
     return teacher
 
 
@@ -49,7 +49,8 @@ def create_subject(session: Session, teacher_id: int, name: str) -> Subject:
 def get_subjects_by_teacher(session: Session, teacher_id: int) -> List[Subject]:
     """Получить все дисциплины преподавателя."""
     result = session.execute(
-        select(Subject).where(Subject.teacher_id == teacher_id).order_by(Subject.name)
+        select(Subject).where(Subject.teacher_id ==
+                              teacher_id).order_by(Subject.name)
     )
     return list(result.scalars().all())
 
@@ -92,7 +93,8 @@ def create_student(session: Session, teacher_id: int, full_name: str) -> Student
 
 def create_students_bulk(session: Session, teacher_id: int, names: List[str]) -> List[Student]:
     """Массовое создание студентов в общем пуле."""
-    students = [Student(teacher_id=teacher_id, full_name=name.strip()) for name in names if name.strip()]
+    students = [Student(teacher_id=teacher_id, full_name=name.strip())
+                for name in names if name.strip()]
     session.add_all(students)
     session.commit()
     for student in students:
@@ -103,7 +105,8 @@ def create_students_bulk(session: Session, teacher_id: int, names: List[str]) ->
 def get_all_students_by_teacher(session: Session, teacher_id: int) -> List[Student]:
     """Получить всех студентов преподавателя (общий пул)."""
     result = session.execute(
-        select(Student).where(Student.teacher_id == teacher_id).order_by(Student.full_name)
+        select(Student).where(Student.teacher_id ==
+                              teacher_id).order_by(Student.full_name)
     )
     return list(result.scalars().all())
 
@@ -144,10 +147,10 @@ def add_student_to_subject(session: Session, subject_id: int, student_id: int) -
             SubjectStudent.student_id == student_id
         )
     ).scalar_one_or_none()
-    
+
     if existing:
         return existing  # Уже добавлен
-    
+
     link = SubjectStudent(subject_id=subject_id, student_id=student_id)
     session.add(link)
     session.commit()
@@ -163,7 +166,7 @@ def remove_student_from_subject(session: Session, subject_id: int, student_id: i
             SubjectStudent.student_id == student_id
         )
     ).scalar_one_or_none()
-    
+
     if link:
         # Удаляем также записи посещаемости этого студента по этой дисциплине
         session.execute(
@@ -193,9 +196,10 @@ def get_students_not_in_subject(session: Session, teacher_id: int, subject_id: i
     """Получить студентов преподавателя, которые НЕ в дисциплине."""
     # Получаем ID студентов, которые уже в дисциплине
     in_subject = session.execute(
-        select(SubjectStudent.student_id).where(SubjectStudent.subject_id == subject_id)
+        select(SubjectStudent.student_id).where(
+            SubjectStudent.subject_id == subject_id)
     ).scalars().all()
-    
+
     # Получаем остальных
     result = session.execute(
         select(Student)
@@ -230,10 +234,10 @@ def count_students_in_subject(session: Session, subject_id: int) -> int:
 # === Attendance CRUD ===
 
 def set_attendance(
-    session: Session, 
+    session: Session,
     student_id: int,
     subject_id: int,
-    attendance_date: date, 
+    attendance_date: date,
     is_present: bool
 ) -> Attendance:
     """Установить/обновить посещаемость студента на дату."""
@@ -245,7 +249,7 @@ def set_attendance(
             Attendance.date == attendance_date
         )
     ).scalar_one_or_none()
-    
+
     if attendance:
         attendance.is_present = is_present
     else:
@@ -256,7 +260,7 @@ def set_attendance(
             is_present=is_present
         )
         session.add(attendance)
-    
+
     session.commit()
     session.refresh(attendance)
     return attendance
@@ -279,8 +283,8 @@ def get_attendance_by_subject_and_date(
 
 
 def get_student_attendance_by_subject(
-    session: Session, 
-    student_id: int, 
+    session: Session,
+    student_id: int,
     subject_id: int
 ) -> List[Attendance]:
     """Получить все записи посещаемости студента по конкретной дисциплине."""

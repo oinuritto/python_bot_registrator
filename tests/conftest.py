@@ -2,8 +2,8 @@
 Фикстуры для тестов.
 """
 
-import pytest
 from datetime import date
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -77,32 +77,40 @@ def subject_with_students(session, subject, students):
 def attendance_data(session, subject_with_students, students):
     """Тестовые данные посещаемости."""
     dates = [date(2024, 11, 1), date(2024, 11, 8), date(2024, 11, 15)]
-    
+
     # Иванов - 100% (3/3)
     # Петров - 66% (2/3)
     # Сидоров - 33% (1/3)
-    
+
     attendance_records = [
         # 01.11 - все присутствовали
-        Attendance(student_id=students[0].id, subject_id=subject_with_students.id, date=dates[0], is_present=True),
-        Attendance(student_id=students[1].id, subject_id=subject_with_students.id, date=dates[0], is_present=True),
-        Attendance(student_id=students[2].id, subject_id=subject_with_students.id, date=dates[0], is_present=True),
+        Attendance(
+            student_id=students[0].id, subject_id=subject_with_students.id, date=dates[0], is_present=True),
+        Attendance(
+            student_id=students[1].id, subject_id=subject_with_students.id, date=dates[0], is_present=True),
+        Attendance(
+            student_id=students[2].id, subject_id=subject_with_students.id, date=dates[0], is_present=True),
         # 08.11 - Сидоров отсутствует
-        Attendance(student_id=students[0].id, subject_id=subject_with_students.id, date=dates[1], is_present=True),
-        Attendance(student_id=students[1].id, subject_id=subject_with_students.id, date=dates[1], is_present=True),
-        Attendance(student_id=students[2].id, subject_id=subject_with_students.id, date=dates[1], is_present=False),
+        Attendance(
+            student_id=students[0].id, subject_id=subject_with_students.id, date=dates[1], is_present=True),
+        Attendance(
+            student_id=students[1].id, subject_id=subject_with_students.id, date=dates[1], is_present=True),
+        Attendance(
+            student_id=students[2].id, subject_id=subject_with_students.id, date=dates[1], is_present=False),
         # 15.11 - только Иванов
-        Attendance(student_id=students[0].id, subject_id=subject_with_students.id, date=dates[2], is_present=True),
-        Attendance(student_id=students[1].id, subject_id=subject_with_students.id, date=dates[2], is_present=False),
-        Attendance(student_id=students[2].id, subject_id=subject_with_students.id, date=dates[2], is_present=False),
+        Attendance(
+            student_id=students[0].id, subject_id=subject_with_students.id, date=dates[2], is_present=True),
+        Attendance(
+            student_id=students[1].id, subject_id=subject_with_students.id, date=dates[2], is_present=False),
+        Attendance(
+            student_id=students[2].id, subject_id=subject_with_students.id, date=dates[2], is_present=False),
     ]
-    
+
     session.add_all(attendance_records)
     session.commit()
-    
+
     return {
         "dates": dates,
         "subject": subject_with_students,
         "students": students,
     }
-

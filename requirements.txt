@@ -7,7 +7,7 @@ python-telegram-bot==20.7
 python-dotenv==1.0.0
 
 # База данных
-sqlalchemy==2.0.23
+sqlalchemy==2.0.44
 
 # Экспорт в Excel
 openpyxl==3.1.2

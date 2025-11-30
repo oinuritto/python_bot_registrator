@@ -24,4 +24,3 @@ __all__ = [
     "create_students_chart",
     "create_overall_chart",
 ]
-

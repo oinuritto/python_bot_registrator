@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 from bot.config import DATABASE_URL, DATA_DIR
+from bot.database.models import Base
 
 # Убедимся, что папка data существует
 DATA_DIR.mkdir(exist_ok=True)
@@ -28,6 +29,4 @@ def get_session() -> Session:
 
 def init_db():
     """Инициализация БД - создание всех таблиц."""
-    from bot.database.models import Base
     Base.metadata.create_all(bind=engine)
-
