@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+.cursor-config/
+*.swp
+*.swo
+
+# Тесты
+tests/
+pytest.ini
+.pytest_cache/
+
+# Локальные данные
+data/
+logs/
+*.db
+*.log
+
+# Env
+.env
+.env.local
+
+# Документация
+README.md
+*.md
+
