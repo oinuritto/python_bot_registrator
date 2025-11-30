@@ -9,7 +9,8 @@ from typing import Optional
 from bot.database import get_session, crud
 
 
-def get_student_stats(student_id: int, subject_id: Optional[int] = None) -> dict:
+def get_student_stats(student_id: int, subject_id: Optional[int] = None, 
+                      date_from: Optional[date] = None, date_to: Optional[date] = None) -> dict:
     """
     Статистика по конкретному студенту.
     
@@ -29,6 +30,12 @@ def get_student_stats(student_id: int, subject_id: Optional[int] = None) -> dict
         if subject_id:
             # Получаем ВСЕ даты занятий по дисциплине
             all_dates = crud.get_subject_attendance_dates(session, subject_id)
+            
+            # Фильтруем по периоду
+            if date_from:
+                all_dates = [d for d in all_dates if d >= date_from]
+            if date_to:
+                all_dates = [d for d in all_dates if d <= date_to]
             
             # Получаем записи посещаемости студента
             attendances = crud.get_student_attendance_by_subject(
@@ -83,7 +90,8 @@ def get_student_stats(student_id: int, subject_id: Optional[int] = None) -> dict
         session.close()
 
 
-def get_subject_stats(subject_id: int) -> dict:
+def get_subject_stats(subject_id: int, date_from: Optional[date] = None, 
+                      date_to: Optional[date] = None) -> dict:
     """
     Статистика по дисциплине.
     
@@ -100,6 +108,12 @@ def get_subject_stats(subject_id: int) -> dict:
         students = crud.get_students_by_subject(session, subject_id)
         dates = crud.get_subject_attendance_dates(session, subject_id)
         
+        # Фильтруем по периоду
+        if date_from:
+            dates = [d for d in dates if d >= date_from]
+        if date_to:
+            dates = [d for d in dates if d <= date_to]
+        
         if not students or not dates:
             return {
                 "subject_name": subject.name,
@@ -113,7 +127,7 @@ def get_subject_stats(subject_id: int) -> dict:
         total_percentage = 0
         
         for student in students:
-            stats = get_student_stats(student.id, subject_id)
+            stats = get_student_stats(student.id, subject_id, date_from, date_to)
             students_stats.append(stats)
             total_percentage += stats.get("percentage", 0)
         
@@ -179,7 +193,8 @@ def get_attendance_by_dates(subject_id: int) -> pd.DataFrame:
         session.close()
 
 
-def get_students_attendance_df(subject_id: int) -> pd.DataFrame:
+def get_students_attendance_df(subject_id: int, date_from: Optional[date] = None,
+                                date_to: Optional[date] = None) -> pd.DataFrame:
     """
     Получить DataFrame с посещаемостью по студентам.
     
@@ -195,7 +210,7 @@ def get_students_attendance_df(subject_id: int) -> pd.DataFrame:
         
         data = []
         for student in students:
-            stats = get_student_stats(student.id, subject_id)
+            stats = get_student_stats(student.id, subject_id, date_from, date_to)
             data.append({
                 "name": student.full_name,
                 "present": stats.get("present", 0),
@@ -212,7 +227,8 @@ def get_students_attendance_df(subject_id: int) -> pd.DataFrame:
         session.close()
 
 
-def get_teacher_overall_stats(teacher_id: int) -> dict:
+def get_teacher_overall_stats(teacher_id: int, date_from: Optional[date] = None,
+                               date_to: Optional[date] = None) -> dict:
     """
     Общая статистика преподавателя по всем дисциплинам.
     """
@@ -226,7 +242,7 @@ def get_teacher_overall_stats(teacher_id: int) -> dict:
         subjects_stats = []
         
         for subject in subjects:
-            stats = get_subject_stats(subject.id)
+            stats = get_subject_stats(subject.id, date_from, date_to)
             subjects_stats.append(stats)
             total_students += stats.get("total_students", 0)
             total_dates += stats.get("total_dates", 0)

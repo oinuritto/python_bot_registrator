@@ -21,18 +21,28 @@ plt.rcParams['figure.figsize'] = (12, 6)
 plt.rcParams['figure.dpi'] = 100
 
 
-def create_dates_chart(subject_id: int, subject_name: str) -> io.BytesIO | None:
+def create_dates_chart(subject_id: int, subject_name: str, 
+                       date_from=None, date_to=None) -> io.BytesIO | None:
     """
     Создать гистограмму посещаемости по датам.
     
     Args:
         subject_id: ID дисциплины
         subject_name: Название дисциплины для заголовка
+        date_from: Начальная дата периода
+        date_to: Конечная дата периода
     
     Returns:
         BytesIO с изображением PNG или None если нет данных
     """
     df = get_attendance_by_dates(subject_id)
+    
+    # Фильтруем по периоду
+    if not df.empty:
+        if date_from:
+            df = df[df['date'] >= date_from]
+        if date_to:
+            df = df[df['date'] <= date_to]
     
     if df.empty:
         return None
@@ -108,18 +118,21 @@ def create_dates_chart(subject_id: int, subject_name: str) -> io.BytesIO | None:
     return buf
 
 
-def create_students_chart(subject_id: int, subject_name: str) -> io.BytesIO | None:
+def create_students_chart(subject_id: int, subject_name: str,
+                          date_from=None, date_to=None) -> io.BytesIO | None:
     """
     Создать гистограмму посещаемости по студентам.
     
     Args:
         subject_id: ID дисциплины
         subject_name: Название дисциплины для заголовка
+        date_from: Начальная дата периода
+        date_to: Конечная дата периода
     
     Returns:
         BytesIO с изображением PNG или None если нет данных
     """
-    df = get_students_attendance_df(subject_id)
+    df = get_students_attendance_df(subject_id, date_from, date_to)
     
     if df.empty:
         return None

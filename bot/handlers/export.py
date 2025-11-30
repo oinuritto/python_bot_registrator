@@ -304,6 +304,11 @@ async def export_date_to_input(update: Update, context: ContextTypes.DEFAULT_TYP
         return WAITING_DATE_TO
     
     date_to = parsed
+    
+    # Сохраняем в context для единообразия
+    context.user_data["export_date_to"] = date_to
+    context.user_data["export_period_text"] = f"{format_date(date_from)} — {format_date(date_to)}"
+    
     export_type = context.user_data.get("export_type", "all")
     subject_id = context.user_data.get("export_subject_id")
     
@@ -532,6 +537,8 @@ async def do_export_from_message(update: Update, context, export_type: str, subj
     
     # Очищаем данные
     context.user_data.pop("export_date_from", None)
+    context.user_data.pop("export_date_to", None)
+    context.user_data.pop("export_period_text", None)
     context.user_data.pop("export_type", None)
     context.user_data.pop("export_subject_id", None)
     
